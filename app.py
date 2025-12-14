@@ -30,8 +30,8 @@ def process_audio():
     # Convert response to speech
     audio_path = os.path.join("static", "audio_reply.mp3")
     speak_text(reply, audio_path)
-
-return jsonify({
+    
+    return jsonify({
     "user": transcript,
     "assistant": reply,
     "audio_url": f"/{audio_path}"})
