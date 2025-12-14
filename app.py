@@ -27,7 +27,7 @@ def process_audio():
     print("Assistant:", reply)
 
     audio_path = os.path.join("static", "audio_reply.mp3")
-    speak_text(reply, audio_path)
+    #speak_text(reply, audio_path)
 
     return jsonify({
         "user": transcript,
