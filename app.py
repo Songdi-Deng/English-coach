@@ -34,7 +34,6 @@ def process_audio():
 return jsonify({
     "user": transcript,
     "assistant": reply,
-    "audio_url": f"/{audio_path}"
-})
+    "audio_url": f"/{audio_path}"})
 
 
