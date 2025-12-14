@@ -8,7 +8,7 @@ app = Flask(__name__, static_folder="static")
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index_jolein.html")
 
 @app.route("/process_audio", methods=["POST"])
 def process_audio():
