@@ -13,7 +13,6 @@ def index():
 
 @app.route("/process_audio", methods=["POST"])
 def process_audio():
-    @app.route("/process_audio", methods=["POST"])
     if 'audio' not in request.files:
         return jsonify({'error': 'No audio file provided'}), 400
 
