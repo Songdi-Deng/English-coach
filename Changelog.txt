@@ -22,3 +22,9 @@ v0.4
 - Updated the front end
 - Because Microsoft Edge-TTS has ceased service, it has been replaced by Google Gemini TTS.
 - Replace gpt-oss20b with qwen3 8b
+
+v0.5
+- Added full RAG (Retrieval-Augmented Generation) pipeline, enabling the system to use course books and PDFs as contextual knowledge
+- Introduced documents/ directory and automated text/PDF ingestion
+- Implemented TF-IDF similarity search and chunking for fast context lookup
+- Integrated RAG into llm.py, enhancing response accuracy based on real study material
