@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>English Speaking Course</title>
+
+  <style>
+    /* Reset & base */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f5f0e8;
+      color: #222;
+      min-height: 100vh;
+    }
+
+    /* Navigation */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 3rem;
+      background: #d4c7b8;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    nav .logo {
+      font-weight: 900;
+      font-size: 1.25rem;
+      cursor: pointer;
+      user-select: none;
+    }
+    nav ul {
+      list-style: none;
+      display: flex;
+      gap: 2rem;
+    }
+    nav ul li a {
+      text-decoration: none;
+      color: inherit;
+      cursor: pointer;
+    }
+
+    /* Sections */
+    .section {
+      padding: 50px 3rem;
+      max-width: 900px;
+      margin: 30px auto;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      border-radius: 8px;
+      background: #fff;
+      display: none;
+    }
+
+    /* Hero */
+    #heroSection {
+      height: 70vh;
+      background: url("{{ url_for('static', filename='background.jpg') }}") center/cover no-repeat;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      color: #ede6dc;
+      text-shadow: 0 0 10px rgba(0,0,0,0.7);
+    }
+
+    h1 { font-size: 2.5rem; }
+    h2 { text-align: center; margin-bottom: 20px; }
+    p { font-size: 1.125rem; line-height: 1.6; text-align: center; }
+
+    button {
+      cursor: pointer;
+      background-color: #d4c7b8;
+      border: none;
+      padding: 12px 25px;
+      font-size: 1rem;
+      border-radius: 6px;
+      font-weight: 600;
+    }
+    button:hover { background-color: #b3a48b; }
+
+    /* Speaking coach */
+    #status { margin-bottom: 10px; font-weight: bold; text-align: center; }
+    #response span.wrong { background-color: #ffcdd2; border-radius: 4px; padding: 2px 4px; }
+    #app { text-align: center; }
+
+    /* Learning Materials */
+    .materials-list {
+      display: flex;
+      justify-content: center;
+      gap: 15px;
+      margin: 25px 0;
+      flex-wrap: wrap;
+    }
+
+    .pdf-container {
+      width: 100%;
+      height: 650px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .pdf-container iframe {
+      width: 100%;
+      height: 100%;
+      border: none;
+      border-radius: 6px;
+    }
+  </style>
+
+  <!-- Activity tracking -->
+  <script src="{{ url_for('static', filename='activity.js') }}" defer></script>
+</head>
+<body>
+
+<nav>
+  <div class="logo" id="homeLink">ENGLISH SPEAKING COURSE</div>
+  <ul>
+    <li><a id="aboutLink">About</a></li>
+    <li><a id="speakingTestLink">Speaking Test</a></li>
+    <li><a id="activityLink">Activity</a></li>
+    <li><a id="materialsLink">Learning Materials</a></li>
+  </ul>
+</nav>
+
+<section id="heroSection">
+  <h1>EMPOWERING YOUR EDUCATIONAL JOURNEY</h1>
+</section>
+
+<section id="about-us" class="section">
+  <h2>About Us</h2>
+  <p>
+    Welcome to our English Speaking Course! Our mission is to empower learners by providing
+    interactive coaching that improves fluency, pronunciation, and confidence.
+  </p>
+</section>
+
+<section id="speaking-test" class="section">
+  <button onclick="startApp()">▶ Start Coaching</button>
+
+  <div id="app" style="display:none;">
+    <h2>English Speaking Coach</h2>
+    <p id="status">Initializing...</p>
+
+    <p><strong>Your speech:</strong></p>
+    <div id="transcript"></div>
+
+    <p><strong>AI Response:</strong></p>
+    <div id="response"></div>
+  </div>
+</section>
+
+<section id="activity" class="section">
+  <h2>Your Activity</h2>
+  <p>Exercises completed: <span id="activityCount">0</span></p>
+  <p>Last active: <span id="activityLast">Never</span></p>
+</section>
+
+<section id="materials" class="section">
+  <h2>Learning Materials</h2>
+  <p>
+    Use the books below to strengthen your grammar and structure alongside speaking practice.
+  </p>
+
+  <div class="materials-list">
+    <button onclick="openBook('Beginner_English_starter.pdf')">📘 Beginner English – Starter</button>
+    <button onclick="openBook('Beginner_English_level_1.pdf')">📗 Beginner English – Level 1</button>
+    <button onclick="openBook('Beginner_English_level_premium.pdf')">📕 Beginner English – Premium</button>
+  </div>
+
+  <div class="pdf-container" id="pdfContainer">
+    <iframe id="pdfViewer"></iframe>
+  </div>
+</section>
+
+<script>
+  function hideAllSections() {
+    document.querySelectorAll('.section').forEach(s => s.style.display = 'none');
+    document.getElementById('heroSection').style.display = 'none';
+  }
+
+  document.getElementById('homeLink').onclick = () => {
+    hideAllSections();
+    document.getElementById('heroSection').style.display = 'flex';
+  };
+
+  document.getElementById('aboutLink').onclick = () => {
+    hideAllSections();
+    document.getElementById('about-us').style.display = 'block';
+  };
+
+  document.getElementById('speakingTestLink').onclick = () => {
+    hideAllSections();
+    document.getElementById('speaking-test').style.display = 'block';
+  };
+
+  document.getElementById('activityLink').onclick = () => {
+    hideAllSections();
+    document.getElementById('activity').style.display = 'block';
+    if (typeof getActivity === 'function') {
+      document.getElementById('activityCount').textContent = getActivity();
+      document.getElementById('activityLast').textContent = getLastActive();
+    }
+  };
+
+  document.getElementById('materialsLink').onclick = () => {
+    hideAllSections();
+    document.getElementById('materials').style.display = 'block';
+  };
+
+  function openBook(filename) {
+    const viewer = document.getElementById('pdfViewer');
+    const container = document.getElementById('pdfContainer');
+    viewer.src = "{{ url_for('static', filename='books/') }}" + filename;
+    container.style.display = 'block';
+    container.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  /* Speaking coach logic (same as index_jolein, with activity update) */
+  let mediaRecorder;
+  let chunks = [];
+  let silenceTimer;
+  const silenceDuration = 2000;
+
+  function startApp() {
+    document.querySelector('#speaking-test button').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    startRecordingLoop();
+  }
+
+  async function startRecordingLoop() {
+    document.getElementById('status').textContent = 'Listening...';
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const audioCtx = new AudioContext();
+    const source = audioCtx.createMediaStreamSource(stream);
+    const analyser = audioCtx.createAnalyser();
+    source.connect(analyser);
+    const data = new Uint8Array(analyser.fftSize);
+
+    mediaRecorder = new MediaRecorder(stream);
+    mediaRecorder.start();
+    chunks = [];
+
+    mediaRecorder.ondataavailable = e => chunks.push(e.data);
+    mediaRecorder.onstop = async () => {
+      document.getElementById('status').textContent = 'Processing...';
+      const blob = new Blob(chunks, { type: 'audio/wav' });
+      const formData = new FormData();
+      formData.append('audio', blob, 'audio.wav');
+
+      const res = await fetch('/process_audio', { method: 'POST', body: formData });
+      const data = await res.json();
+      document.getElementById('transcript').textContent = data.user;
+      renderCorrection(data.assistant);
+
+      if (typeof increaseActivity === 'function') increaseActivity();
+
+      const audio = new Audio(`/static/audio_reply.mp3?ts=${Date.now()}`);
+      audio.onended = () => setTimeout(() => startRecordingLoop(), 1000);
+      audio.play();
+    };
+
+    detectSilence(analyser, data, () => {
+      mediaRecorder.stop();
+      stream.getTracks().forEach(t => t.stop());
+      audioCtx.close();
+    });
+  }
+
+  function detectSilence(analyser, dataArray, onSilence) {
+    clearInterval(silenceTimer);
+    let silentFor = 0;
+    silenceTimer = setInterval(() => {
+      analyser.getByteTimeDomainData(dataArray);
+      const max = Math.max(...dataArray);
+      const min = Math.min(...dataArray);
+      if (max - min < 10) {
+        silentFor += 200;
+        if (silentFor > silenceDuration) {
+          clearInterval(silenceTimer);
+          onSilence();
+        }
+      } else silentFor = 0;
+    }, 200);
+  }
+
+  function renderCorrection(reply) {
+    const match = reply.match(/wrong:(.*?)\s+right:(.*?)\b/i);
+    let html = reply;
+    if (match) html = reply.replace(match[1], `<span class="wrong">${match[1]}</span>`);
+    document.getElementById('response').innerHTML = html;
+    document.getElementById('status').textContent = 'Waiting for next round...';
+  }
+</script>
+
+</body>
+</html>
