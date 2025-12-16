@@ -28,3 +28,6 @@ v0.5
 - Introduced documents/ directory and automated text/PDF ingestion
 - Implemented TF-IDF similarity search and chunking for fast context lookup
 - Integrated RAG into llm.py, enhancing response accuracy based on real study material
+
+v0.6
+- All functions integrated and passed initial testing.

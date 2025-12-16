@@ -1,116 +1,114 @@
-# rag.py
 import os
-import re
-from typing import List
-
+import chromadb
+from chromadb.utils import embedding_functions
 from pypdf import PdfReader
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
 
-# Folder where you put your course books (PDFs or .txt)
-DOCS_DIR = os.path.join(os.path.dirname(__file__), "documents")
+DB_PATH = "./chroma_db_native"
+BOOK_DIR = "static/books"
+COLLECTION_NAME = "english_knowledge_base"
 
+_client = None
+_collection = None
 
-def _read_pdf(path: str) -> str:
-    reader = PdfReader(path)
-    pages = []
-    for page in reader.pages:
-        text = page.extract_text() or ""
-        pages.append(text)
-    return "\n".join(pages)
-
-
-def _read_txt(path: str) -> str:
-    with open(path, "r", encoding="utf-8", errors="ignore") as f:
-        return f.read()
-
-
-def _clean_text(text: str) -> str:
-    text = re.sub(r"\s+", " ", text)
-    return text.strip()
-
-
-def _chunk_text(text: str, chunk_size: int = 600, overlap: int = 100) -> List[str]:
+def get_collection():
     """
-    Very simple word-based chunking.
-    chunk_size ≈ number of words per chunk.
-    overlap keeps some context between chunks.
     """
-    words = text.split()
-    if not words:
-        return []
+    global _client, _collection
+    
+    if _collection is not None:
+        return _collection
 
+    print(f"[RAG] Connecting to native ChromaDB at {DB_PATH}...")
+    _client = chromadb.PersistentClient(path=DB_PATH)
+
+    emb_fn = embedding_functions.DefaultEmbeddingFunction()
+
+    _collection = _client.get_or_create_collection(
+        name=COLLECTION_NAME,
+        embedding_function=emb_fn
+    )
+    if _collection.count() == 0:
+        print("[RAG] Database is empty. Processing PDFs... (One-time setup)")
+        _initialize_database(_collection)
+    else:
+        print(f"[RAG] Loaded {_collection.count()} chunks from disk. (Fast load!)")
+
+    return _collection
+
+def _initialize_database(collection):
+    if not os.path.exists(BOOK_DIR):
+        os.makedirs(BOOK_DIR)
+        print("[RAG] No books found.")
+        return
+
+    documents = []
+    ids = []
+    metadatas = []
+
+    for filename in os.listdir(BOOK_DIR):
+        if filename.endswith(".pdf"):
+            file_path = os.path.join(BOOK_DIR, filename)
+            print(f"  - Processing {filename}...")
+            
+            try:
+                reader = PdfReader(file_path)
+                full_text = ""
+                for page in reader.pages:
+                    full_text += page.extract_text() + "\n"
+                
+                chunks = simple_text_splitter(full_text, chunk_size=500, overlap=50)
+                
+                for idx, chunk in enumerate(chunks):
+                    documents.append(chunk)
+                    ids.append(f"{filename}_{idx}")
+                    metadatas.append({"source": filename})
+                    
+            except Exception as e:
+                print(f"  ! Error reading {filename}: {e}")
+
+    if documents:
+        batch_size = 100
+        total_batches = (len(documents) + batch_size - 1) // batch_size
+        
+        print(f"[RAG] Embedding {len(documents)} chunks...")
+        for i in range(0, len(documents), batch_size):
+            end = i + batch_size
+            collection.add(
+                documents=documents[i:end],
+                ids=ids[i:end],
+                metadatas=metadatas[i:end]
+            )
+        print("[RAG] Initialization complete. Data saved to disk.")
+
+def simple_text_splitter(text, chunk_size=500, overlap=50):
     chunks = []
     start = 0
-    while start < len(words):
+    text_len = len(text)
+    
+    while start < text_len:
         end = start + chunk_size
-        chunk = " ".join(words[start:end])
+        chunk = text[start:end]
         chunks.append(chunk)
-        start += max(1, chunk_size - overlap)
+        start += (chunk_size - overlap)
+        
     return chunks
 
-
-def _load_all_chunks() -> List[str]:
-    if not os.path.isdir(DOCS_DIR):
-        return []
-
-    chunks: List[str] = []
-    for fname in os.listdir(DOCS_DIR):
-        path = os.path.join(DOCS_DIR, fname)
-        if not os.path.isfile(path):
-            continue
-
-        text = ""
-        lower = fname.lower()
-        try:
-            if lower.endswith(".pdf"):
-                text = _read_pdf(path)
-            elif lower.endswith(".txt"):
-                text = _read_txt(path)
-        except Exception as e:
-            print(f"[RAG] Error reading {fname}: {e}")
-            continue
-
-        cleaned = _clean_text(text)
-        if cleaned:
-            chunks.extend(_chunk_text(cleaned))
-
-    return chunks
-
-
-# ====== Build the index once on import ======
-ALL_CHUNKS: List[str] = _load_all_chunks()
-
-if ALL_CHUNKS:
-    print(f"[RAG] Loaded {len(ALL_CHUNKS)} chunks from course books.")
-    _vectorizer = TfidfVectorizer(ngram_range=(1, 2))
-    _doc_vectors = _vectorizer.fit_transform(ALL_CHUNKS)
-else:
-    print("[RAG] No documents found in 'documents' folder.")
-    _vectorizer = None
-    _doc_vectors = None
-
-
-def get_relevant_context(query: str, k: int = 4) -> str:
+def get_relevant_context(query):
     """
-    Return a string with the k most relevant chunks for the given query.
-    If there are no docs, returns empty string.
     """
-    if _vectorizer is None or _doc_vectors is None or not ALL_CHUNKS:
+    try:
+        col = get_collection()
+        
+        results = col.query(
+            query_texts=[query],
+            n_results=2
+        )
+        
+        if results['documents']:
+            context_text = "\n\n".join(results['documents'][0])
+            return context_text
         return ""
-
-    q_vec = _vectorizer.transform([query])
-    sims = cosine_similarity(q_vec, _doc_vectors)[0]
-
-    # Highest similarity first
-    top_idx = sims.argsort()[::-1][:k]
-    selected = []
-    for i in top_idx:
-        if sims[i] <= 0:
-            continue
-        selected.append(ALL_CHUNKS[i])
-
-    if not selected:
+        
+    except Exception as e:
+        print(f"[RAG Error] {e}")
         return ""
-
-    return "\n\n---\n\n".join(selected)

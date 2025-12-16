@@ -7,7 +7,8 @@ numpy
 tqdm
 requests
 google-genai
-pypdf
 scikit-learn
 cryptography
 pypdf[crypto]
+chromadb
+sentence-transformers
