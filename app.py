@@ -13,7 +13,7 @@ except ImportError:
 app = Flask(__name__, static_folder="static")
 
 with app.app_context():
-    print("🚀 Pre-loading RAG database...")
+    print("Pre-loading RAG database...")
     get_collection()
 
 @app.route("/")

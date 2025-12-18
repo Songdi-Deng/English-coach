@@ -1,69 +1,121 @@
-English Speaking Coach - A Local English Speaking Coaching System
+# English Speaking Coach
 
-Project Introduction: This project is a locally running English speaking practice system that combines Whisper (speech recognition) and a local LLM (such as llama3) to enable instructional dialogues. Users can engage in natural English conversations with an AI teacher via a web interface. The system features real-time speech recognition, speech synthesis, grammar correction, and continuous conversation capabilities.
+**English Speaking Coach** is a high-fidelity Speaking simulator. It combines the privacy and control of a locally running **Ollama** model (customized via Modelfile) with the advanced multimodal audio capabilities of **Google Gemini**.
 
+It features a custom-defined "Examiner" model running locally for logic and reasoning, while leveraging Google Gemini for high-accuracy Speech-to-Text (STT) and natural Text-to-Speech (TTS).
 
-Core Functions:
+---
 
-- Automatically detects silence to start/end recording for seamless voice input.
+## System Architecture
 
-- Whisper model for English speech recognition, forcing English mode to avoid misrecognition.
+* ** The Brain (Local):** **Ollama (Custom Model)**
+  * **Configuration**: Uses a custom `Modelfile` (located in `info/modelfile`) to define the strict persona and behavior of a coach.
+  * **Inference**: Runs locally via Ollama (e.g., based on Qwen 2.5), ensuring low latency and privacy for the logic layer.
+  * **Logic Control**: A Python-based State Machine enforces the strict exam flow (Part 1 → Part 2 → Scoring).
 
-- LLM simulates a C1-level English teacher based on prompts, providing grammar explanations and dialogue guidance.
+* **The Senses (Cloud):** **Google Gemini**
+  * **Listening (`stt.py`)**: Uses Gemini (2.5 pro) for instant, accurate English transcription.
+  * **Speaking (`tts.py`)**: Uses Gemini's generative audio capabilities for high-quality, natural-sounding responses.
 
-- Edge-TTS converts AI responses into voice playback, enhancing the interactive experience.
+---
 
-- Supports contextual memory, simulating natural conversational rhythm.
+## Project Structure
 
-- All models and audio files run locally, ensuring data privacy and security.
+```text
+English-coach/
+│
+├── app.py          # Flask server & main application logic
+├── stt.py          # Google Gemini STT input (Speech-to-Text)
+├── tts.py          # Google Gemini TTS output (Text-to-Speech)
+├── llm.py          # Local Ollama interface + RAG integration
+├── rag.py          # Retrieval-Augmented Generation pipeline
+│
+├── info/
+│   └── modelfile   # Custom Ollama configuration file (System Prompt)
+│
+├── config.json     # System configuration parameters
+│
+├── static/
+│   ├── audio_reply.mp3  # Generated TTS output
+│   └── books/           # PDF and TXT course books (used by RAG)
+│
+└── templates/
+    └── index.html       # Web UI (frontend)
+Core Features
+1. Custom Ollama Examiner
+Defined Persona: The system uses the info/modelfile to create a dedicated model (e.g., "english-coach"). This file contains the specific System Prompts that force the model to act as a professional examiner.
 
+2. Full-Link Gemini Audio
+STT: Handles user accents and ignores non-English noise using Google's latest models.
 
-Dependencies:
+TTS: Uses Gemini's neural generation to "act out" the examiner's lines with proper intonation.
 
-- Python >= 3.9
+3. RAG (Retrieval-Augmented Generation)
+Supports local PDF/Textbooks in static/books/.
 
-- Browser supports Web Audio API (Chrome or Edge recommended)
+The system retrieves relevant vocabulary or sample answers and feeds them into the Ollama model context to provide "teacher-like" feedback.
 
-- Local deployment and running of llama3 or a compatible model in Ollama.
+Requirements
+Software:
 
+Ollama: Must be installed and running locally.
 
-Usage:
+Python: 3.9+
 
-1. Install dependencies:
+Google API Key: Required for Gemini STT/TTS.
+
+Python Libraries: (See requirements.txt)
+
+ Setup & Usage
+1. Install Dependencies
+Bash
 
 pip install -r requirements.txt
+2. Setup Ollama Model
+Ensure Ollama is installed.
 
+Create the custom model using your file in info/:
 
-2. Run the service in Terminal:
+Bash
+
+ollama create english-coach -f info/modelfile
+3. Configure (config.json)
+Ensure config.json points to your created Ollama model name:
+
+JSON
+
+{
+  "model": "english-coach",
+  "google_api_key": "YOUR_GEMINI_API_KEY"
+}
+4. Run the System
+Bash
 
 python app.py
+5. Start
+Open your browser to http://127.0.0.1:5000.
 
-3. Access via browser:
+Click the Microphone button.
 
-http://127.0.0.1:5000
+Say "Start" to begin.
 
+Workflow: You Speak → Gemini STT → Local Ollama (Custom Model) Think → Gemini TTS Speak.
 
-Directory Structure:
+Troubleshooting
+Ollama Connection Error:
 
-- app.py: Main entry point for Flask service
+Ensure Ollama is running (ollama serve).
 
-- tts.py: Speech synthesis module (used for...) edge-tts)
+Verify the model name in config.json matches the one you created (english-coach).
 
-- stt.py: Whisper speech recognition
+Gemini Audio Errors:
 
-- llm.py: Calls the local LLM model to process contextual dialogue
+Check your API Key.
 
-- config.json: Parameter settings (speech, model, etc.)
-
-- prompts.json: Teacher prompt word templates
-
-- static/: Stores the generated audio file (audio_reply.mp3)
-
-- templates/: Web page HTML templates
-
+If TTS fails (400 Error), check if the prompt in modelfile is strictly text-based and not asking for audio bytes directly.
 
 Group distribution for the project:
-- Songdi: 
-- Rachel:
-- Jan: 
-- Jolein: 
+- Songdi: Backend & Prompts & Fine tuning 
+- Rachel: Frontend Design
+- Jan: Backend Pipeline & Presentation
+- Jolein: Frontend Design & Demonstration

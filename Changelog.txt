@@ -31,3 +31,8 @@ v0.5
 
 v0.6
 - All functions integrated and passed initial testing.
+
+v0.7
+- Modified the model response logic
+- Fixed many bugs
+- Add prompt words

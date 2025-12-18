@@ -226,11 +226,11 @@
     container.scrollIntoView({ behavior: 'smooth' });
   }
 
-  /* Speaking coach logic (same as index_jolein, with activity update) */
+  /* Speaking Coach with improved silence detection */
   let mediaRecorder;
   let chunks = [];
   let silenceTimer;
-  const silenceDuration = 2000;
+  const silenceDuration = 3000;  // 3 seconds of silence AFTER speaking
 
   function startApp() {
     document.querySelector('#speaking-test button').style.display = 'none';
@@ -240,26 +240,32 @@
 
   async function startRecordingLoop() {
     document.getElementById('status').textContent = 'Listening...';
+    
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const audioCtx = new AudioContext();
     const source = audioCtx.createMediaStreamSource(stream);
     const analyser = audioCtx.createAnalyser();
     source.connect(analyser);
+
     const data = new Uint8Array(analyser.fftSize);
+    let hasSpoken = false; // Detect whether user actually talked
 
     mediaRecorder = new MediaRecorder(stream);
     mediaRecorder.start();
     chunks = [];
 
     mediaRecorder.ondataavailable = e => chunks.push(e.data);
+
     mediaRecorder.onstop = async () => {
       document.getElementById('status').textContent = 'Processing...';
+
       const blob = new Blob(chunks, { type: 'audio/wav' });
       const formData = new FormData();
       formData.append('audio', blob, 'audio.wav');
 
       const res = await fetch('/process_audio', { method: 'POST', body: formData });
       const data = await res.json();
+
       document.getElementById('transcript').textContent = data.user;
       renderCorrection(data.assistant);
 
@@ -274,25 +280,42 @@
       mediaRecorder.stop();
       stream.getTracks().forEach(t => t.stop());
       audioCtx.close();
+    }, () => {
+      hasSpoken = true;   // callback that marks "user has spoken"
     });
   }
 
-  function detectSilence(analyser, dataArray, onSilence) {
+  function detectSilence(analyser, dataArray, onSilence, onSpeechDetected) {
     clearInterval(silenceTimer);
+
     let silentFor = 0;
+    let spoken = false;
+
     silenceTimer = setInterval(() => {
       analyser.getByteTimeDomainData(dataArray);
+
       const max = Math.max(...dataArray);
       const min = Math.min(...dataArray);
-      if (max - min < 10) {
-        silentFor += 200;
-        if (silentFor > silenceDuration) {
+      const level = max - min;  // simple estimate of voice volume
+
+      if (level > 10) {
+      // user is talking
+        spoken = true;
+        silentFor = 0;
+        onSpeechDetected();
+      } 
+      else {
+        if (spoken) {
+          silentFor += 200;
+          if (silentFor >= silenceDuration) {
           clearInterval(silenceTimer);
           onSilence();
         }
-      } else silentFor = 0;
-    }, 200);
-  }
+      }
+      // If not spoken yet → do nothing (user is still thinking)
+    }
+  }, 200);
+}
 
   function renderCorrection(reply) {
     const match = reply.match(/wrong:(.*?)\s+right:(.*?)\b/i);
